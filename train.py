@@ -173,7 +173,7 @@ class Model(ModelDesc):
                     tf.shape(image)[0] // config.ANCHOR_STRIDE,
                     tf.shape(image)[1] // config.ANCHOR_STRIDE,
                     -1, -1]), name='fm_anchors')
-            fm_anchors = tf.transpose(fm_anchors, [0, 2, 3, 1])
+
             return fm_anchors
 
     def _build_graph(self, inputs):
@@ -314,7 +314,7 @@ class Model(ModelDesc):
             opt = tf.train.MomentumOptimizer(lr, 0.9)
         return opt
 
-def visualize(model_path, nr_visualize=50, output_dir='output'):
+def visualize(model_path, nr_visualize=50, output_dir='visualize'):
     df = get_train_dataflow()   # we don't visualize mask stuff
     df.reset_state()
 
@@ -349,7 +349,10 @@ def visualize(model_path, nr_visualize=50, output_dir='output'):
             # draw the scores for the above proposals
             score_viz = draw_predictions(img, rpn_boxes[good_proposals_ind], all_probs[good_proposals_ind])
 
-            results = [DetectionResult(*args) for args in zip(final_boxes, final_probs, final_labels, final_masks)]
+            #results = [DetectionResult(*args) for args in zip(final_boxes, final_probs, final_labels, final_masks)]
+            results = [DetectionResult(*args) for args in
+                       zip(final_boxes, final_probs, final_labels,
+                           [None] * len(final_labels))]
             final_viz = draw_final_outputs(img, results)
 
             viz = tpviz.stack_patches([
@@ -428,8 +431,6 @@ def predict_many(pred_func, input_files):
         final = draw_final_outputs(img, results)
         plt.imshow(final)
         plt.savefig(os.path.join('output', str(idx)+'.png'))
-#        viz = np.concatenate((img, final), axis=1)
-#        tpviz.interactive_imshow(viz)
 
 class EvalCallback(Callback):
     def _setup_graph(self):

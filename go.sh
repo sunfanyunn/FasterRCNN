@@ -1,5 +1,5 @@
 #!/bin/bash -ex
-model=train_log/fastrcnn/model-79800
+model=$1
 
 . ~/ENV/bin/activate
 ./train.py --load $model --evaluate

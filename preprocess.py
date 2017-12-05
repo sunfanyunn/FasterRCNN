@@ -101,7 +101,7 @@ ORGANS = ['Brain Stem', 'Chiasm', 'Cochlea', 'Eye',
 ORGANS_MAPPING = dict([ (ind, organ) for ind, organ in zip(range(1,10), ORGANS) ])
 
 # crop and save image
-def preprocess(filenames):
+def preprocess(filenames, fusion=True):
     for index, filename in tqdm(enumerate(filenames)):
         basename = os.path.basename(filename)
         basename, _ = os.path.splitext(basename)
@@ -111,9 +111,11 @@ def preprocess(filenames):
         with open(filename, 'rb') as f:
             _file = pickle.load(f)
 
-        mri_image = plt.imread(mri_path + basename + '.jpg')
-        mri_image = cv2.resize(mri_image, (250,250), interpolation=cv2.INTER_LINEAR)
-        mri_image = mri_image[25:225, 25:225]
+        if fusion:
+            mri_image = plt.imread(mri_path + basename + '.jpg')
+            mri_image = cv2.resize(mri_image, (250,250), interpolation=cv2.INTER_LINEAR)
+            mri_image = mri_image[25:225, 25:225]
+
         image_data = _file['image']
 
         xoffset = (image_data.shape[0]-200)/2
@@ -122,14 +124,20 @@ def preprocess(filenames):
         offset = xoffset
 
         image_data = image_data[xoffset:xoffset+200,yoffset:yoffset+200]
-        image_data[...,1] = mri_image
+        if fusion:
+            image_data[...,1] = mri_image
+
         assert image_data.shape == (200,200,3)
         image_data = image_data.astype(np.uint8)
 
-        plt.imsave(os.path.join('/tmp2/oar/ct_segmentation_data_fine/processed_image',basename) + '.png', image_data)
+        if fusion:
+            plt.imsave(os.path.join('/tmp2/oar/ct_segmentation_data_fine/fusion',basename) + '.png', image_data)
+        else:
+            plt.imsave(os.path.join('/tmp2/oar/ct_segmentation_data_fine/processed_image',basename) + '.png', image_data)
 
 if __name__ == '__main__':
     mri_path = '/tmp2/oar/ct_segmentation_data_fine/mri/'
-    filenames = glob.glob("/tmp2/oar/ct_segmentation_data_fine/test/**/*.pkl") + glob.glob("/tmp2/oar/ct_segmentation_data_fine/train/**/*.pkl") 
+    filenames = glob.glob('/tmp2/oar/ct_segmentation_data_fine/**/**/*.pkl')
+#    filenames = glob.glob("/tmp2/oar/ct_segmentation_data_fine/test/**/*.pkl") + glob.glob("/tmp2/oar/ct_segmentation_data_fine/train/**/*.pkl") 
     print(len(filenames))
-    preprocess(filenames)
+    preprocess(filenames, fusion=False)

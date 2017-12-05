@@ -9,105 +9,7 @@ from tensorpack.dataflow import RNGDataFlow
 from tensorpack.dataflow.imgaug import transform
 from tensorpack.utils import logger
 
-#import pycocotools.mask as cocomask
-
 import config
-
-def evaluate_mask_mean_iou(results_pack):
-        gt_masks = {}
-        pred_masks = {}
-        case_hist = {}
-        
-        nine_organs = {}
-        for result_rec in results_pack['results_list']:
-            # result_rec contain prediction info
-            # result_rec['image'] : source image store path
-            # result_rec['boxes'], result_rec['masks'] are aligned
-            image_path = result_rec['image']
-            result_image_id = image_path.split("/")[-1].split(".")[0]
-            im_info = result_rec['im_info']
-            detections = result_rec['boxes']
-            seg_masks = result_rec['masks']
-            filename = image_path.split("/")[-1]
-            filename = filename.replace('.png', '')
-            # pred_semantic for debug (store slice information to debug)
-            # you can ignore
-            result_path = 'data/oar/results/pred_semantic/'
-            if not (os.path.exists(result_path)):
-                os.makedirs(result_path)
-            print ('writing results for: ', filename)
-            result_txt = os.path.join(result_path, filename)
-            result_txt = result_txt + '.txt'
-            count = 0
-            # Whole image mask to store debug slice, can ignore
-            # mask_image store instance masks need for final results
-            whole_mask_image = np.zeros((int(im_info[0, 0]), int(im_info[0, 1])))
-            for j, labelID in enumerate(self.class_id):
-                if labelID == 0:
-                    continue
-                dets = detections[j]
-                masks = seg_masks[j]
-                mask_image = np.zeros((int(im_info[0, 0]), int(im_info[0, 1])))
-                for i in range(len(dets)):
-                    bbox = dets[i, :4]
-                    # bbox = dets[i, :4]
-                    score = dets[i, -1]
-                    bbox = map(int, bbox)
-                    # mask_image = np.zeros((int(im_info[0, 0]), int(im_info[0, 1])))
-                    mask = masks[i, :, :]
-                    mask = cv2.resize(mask, (bbox[2] - bbox[0], (bbox[3] - bbox[1])), interpolation=cv2.INTER_LINEAR)
-                    mask[mask > 0.5] = 1
-                    mask[mask <= 0.5] = 0
-                    mask_image[bbox[1]: bbox[3], bbox[0]: bbox[2]] = mask
-                    whole_mask_image[bbox[1]: bbox[3], bbox[0]: bbox[2]] = mask
-                    # cv2.imwrite(os.path.join(result_path, filename) + '_' + str(count) + '.png', mask_image)
-                    # f.write('{:s} {:s} {:.8f}\n'.format(filename + '_' + str(count) + '.png', str(labelID), score))
-                    count += 1
-                # According to patient_id and slice_num (depth, order of the ct slice)
-                # I store mask_image into dict for later dump to nii
-                patient_id = result_image_id.split("_")[0]
-                slice_num = result_image_id.split("_")[1]
-                if patient_id in nine_organs:
-                    if slice_num not in nine_organs[patient_id]:
-                        nine_organs[patient_id][slice_num] = {}
-                    nine_organs[patient_id][slice_num][self.classes[labelID]] = mask_image
-                else:
-                    nine_organs[patient_id] = {}
-                    nine_organs[patient_id][slice_num] = {}
-                    nine_organs[patient_id][slice_num][self.classes[labelID]] = mask_image
-                    # [122434_0]['Eye'] = mask
-            #(for debug) cv2.imwrite(os.path.join(result_path, filename) + '.png', mask_image)
-            pred_masks[result_image_id] = whole_mask_image
-            #(for debug) writeLabelImage(mask_image, os.path.join(result_path, filename) + '.png')
-
-        # write nine label binary nii
-        for patient_id in nine_organs.keys():
-            print("now processing {} ...".format(patient_id))
-            for cls in self.classes:
-                _s = []
-                print("procssing {} organ".format(cls))
-                for slice_id in range(len(nine_organs[patient_id])):
-                    _slice = np.zeros((200, 200)).astype(np.uint8)
-                    #offset = int((512 - 200)/2)
-                    if cls in nine_organs[patient_id][str(slice_id)]:
-                        #_slice[offset:offset + 200,offset:offset + 200] = cv2.resize(nine_organs[patient_id][str(slice_id)][cls], None, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_LINEAR).astype(np.uint8)
-                        current_path = result_path + str(patient_id) + '/' + cls
-                        if not (os.path.exists(current_path)):
-                            os.makedirs(current_path)
-                        # just resize to 200*200
-                        _slice = cv2.resize(nine_organs[patient_id][str(slice_id)][cls], None, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_LINEAR).astype(np.uint8)
-                        cv2.imwrite(current_path + '/' + '{0:03d}'.format(slice_id) + '.png', (_slice*1.0 / np.max(_slice)*255))
-                    _s.append(_slice)
-                _s = np.array(_s)
-                # n*200*200
-                print(_s.shape)
-                dir_path = "/tmp2/oar/eval_files/"+patient_id
-                filename = "/tmp2/oar/eval_files/"+patient_id+"/"+cls+".nii"
-                if not (os.path.exists(dir_path)):
-                    os.makedirs(dir_path)
-                # sitk can write nii
-                sitk.WriteImage(sitk.GetImageFromArray(_s), filename)
-
 
 class DataFromListOfDict(RNGDataFlow):
     def __init__(self, lst, keys, shuffle=False):
@@ -184,6 +86,7 @@ def point8_to_box(points):
 
 
 def segmentation_to_mask(polys, height, width):
+    assert False
     """
     Convert polygons to binary masks.
 

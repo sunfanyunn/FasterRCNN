@@ -63,7 +63,7 @@ class OARDetection(object):
             data['height'] = 200
             data['width'] = 200
             data['id'] = index
-            data['file_name'] = os.path.join(config.BASEDIR,'processed_image',basename) + '.png'
+            data['file_name'] = os.path.join(config.IMAGEDIR,basename) + '.png'
 
             num_instances = _file[b'num_instance']
 #            if (num_instances == 0):

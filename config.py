@@ -9,6 +9,7 @@ MODE_MASK = True
 
 # dataset -----------------------
 BASEDIR = '/tmp2/oar/ct_segmentation_data_fine/'
+IMAGEDIR = '/tmp2/oar/ct_segmentation_data_fine/fusion'
 TRAIN_DATASET = ['train']
 VAL_DATASET = 'val'   # only support evaluation on one dataset
 TEST_DATASET = 'test'

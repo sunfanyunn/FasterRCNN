@@ -12,7 +12,6 @@ from tensorpack.dataflow import (
     MapDataComponent, DataFromList, PrefetchDataZMQ)
 import tensorpack.utils.viz as tpviz
 
-#from coco import COCODetection
 from oar import OARDetection
 
 from utils.generate_anchors import generate_anchors
@@ -252,12 +251,12 @@ def get_train_dataflow(add_mask=True):
             assert len(boxes) == np.asarray(masks).shape[0]
             ret.append(masks)
 #
-#            from viz import draw_annotation, draw_mask
-#            viz = draw_annotation(im, boxes, klass)
-#            for mask in masks:
-#                viz = draw_mask(viz, mask)
-#            tpviz.interactive_imshow(viz)
-#            input()
+            from viz import draw_annotation, draw_mask
+            viz = draw_annotation(im, boxes, klass)
+            for mask in masks:
+                viz = draw_mask(viz, mask)
+            tpviz.interactive_imshow(viz)
+            input()
 
         return ret
 

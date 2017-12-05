@@ -455,7 +455,6 @@ class EvalCallback(Callback):
         if self.epoch_num in self.epochs_to_eval:
             self._eval()
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpu', help='comma separated list of GPU(s) to use.')

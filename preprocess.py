@@ -94,13 +94,7 @@ def showLabel(image):
     rgb[:,:,2] = b/1.0
     return np.uint8(rgb)
 
-ORGANS = ['Brain Stem', 'Chiasm', 'Cochlea', 'Eye',
-          'Inner Ears', 'Larynx', 'Lens',
-          'Optic Nerve', 'Spinal Cord']
-
-ORGANS_MAPPING = dict([ (ind, organ) for ind, organ in zip(range(1,10), ORGANS) ])
-
-# crop and save image
+# crop (and fusion) then save image
 def preprocess(filenames, fusion=True):
     for index, filename in tqdm(enumerate(filenames)):
         basename = os.path.basename(filename)
@@ -137,7 +131,7 @@ def preprocess(filenames, fusion=True):
 
 if __name__ == '__main__':
     mri_path = '/tmp2/oar/ct_segmentation_data_fine/mri/'
-    filenames = glob.glob('/tmp2/oar/ct_segmentation_data_fine/**/**/*.pkl')
+    filenames = glob.glob(config.BASEDIR + '/**/**/*.pkl')
 #    filenames = glob.glob("/tmp2/oar/ct_segmentation_data_fine/test/**/*.pkl") + glob.glob("/tmp2/oar/ct_segmentation_data_fine/train/**/*.pkl") 
     print(len(filenames))
     preprocess(filenames, fusion=False)

@@ -187,6 +187,7 @@ def get_rpn_anchor_input(im, boxes, is_crowd):
     featuremap_boxes = featuremap_boxes.reshape((featureH, featureW, config.NUM_ANCHOR, 4))
     return featuremap_labels, featuremap_boxes
 
+
 def get_train_dataflow(add_mask=True):
     """
     Return a training dataflow. Each datapoint is:
@@ -232,24 +233,12 @@ def get_train_dataflow(add_mask=True):
 
         # masks
         if add_mask:
-            # augmentation will modify the polys in-place
-            #segmentation = copy.deepcopy(img.get('segmentation', None))
-            #segmentation = [segmentation[k] for k in range(len(segmentation)) if not is_crowd[k]]
-            #assert len(segmentation) == len(boxes)
-
-            ## one image-sized binary mask per box
-            #masks = []
-            #for polys in segmentation:
-            #    polys = [aug.augment_coords(p, params) for p in polys]
-            #    masks.append(segmentation_to_mask(polys, im.shape[0], im.shape[1]))
-            # values in {0, 1}
-
             masks = img['masks']
             masks = [np.dstack([m, m, m]) for m in masks]
             masks = [aug.augment(m)[...,0] for m in masks]
             assert len(boxes) == np.asarray(masks).shape[0]
             ret.append(masks)
-#
+
 #           from viz import draw_annotation, draw_mask
 #           viz = draw_annotation(im, boxes, klass)
 #           for mask in masks:
@@ -262,6 +251,7 @@ def get_train_dataflow(add_mask=True):
     ds = MapData(ds, preprocess)
     #ds = PrefetchDataZMQ(ds, 500, 1)
     return ds
+
 
 def get_test_dataflow(add_mask=True):
     """
@@ -308,36 +298,18 @@ def get_test_dataflow(add_mask=True):
 
         # masks
         if add_mask:
-            # augmentation will modify the polys in-place
-            #segmentation = copy.deepcopy(img.get('segmentation', None))
-            #segmentation = [segmentation[k] for k in range(len(segmentation)) if not is_crowd[k]]
-            #assert len(segmentation) == len(boxes)
-
-            ## one image-sized binary mask per box
-            #masks = []
-            #for polys in segmentation:
-            #    polys = [aug.augment_coords(p, params) for p in polys]
-            #    masks.append(segmentation_to_mask(polys, im.shape[0], im.shape[1]))
-            # values in {0, 1}
-
             masks = img['masks']
             masks = [np.dstack([m, m, m]) for m in masks]
             masks = [aug.augment(m)[...,0] for m in masks]
             assert len(boxes) == np.asarray(masks).shape[0]
             ret.append(masks)
-#
-#           from viz import draw_annotation, draw_mask
-#           viz = draw_annotation(im, boxes, klass)
-#           for mask in masks:
-#               viz = draw_mask(viz, mask)
-#           tpviz.interactive_imshow(viz)
-#           input()
 
         return ret
 
     ds = MapData(ds, preprocess)
     #ds = PrefetchDataZMQ(ds, 500, 1)
     return ds
+
 
 def get_eval_dataflow(add_mask=True):
     """
@@ -384,30 +356,11 @@ def get_eval_dataflow(add_mask=True):
 
         # masks
         if add_mask:
-            # augmentation will modify the polys in-place
-            #segmentation = copy.deepcopy(img.get('segmentation', None))
-            #segmentation = [segmentation[k] for k in range(len(segmentation)) if not is_crowd[k]]
-            #assert len(segmentation) == len(boxes)
-
-            ## one image-sized binary mask per box
-            #masks = []
-            #for polys in segmentation:
-            #    polys = [aug.augment_coords(p, params) for p in polys]
-            #    masks.append(segmentation_to_mask(polys, im.shape[0], im.shape[1]))
-            # values in {0, 1}
-
             masks = img['masks']
             masks = [np.dstack([m, m, m]) for m in masks]
             masks = [aug.augment(m)[...,0] for m in masks]
             assert len(boxes) == np.asarray(masks).shape[0]
             ret.append(masks)
-#
-#           from viz import draw_annotation, draw_mask
-#           viz = draw_annotation(im, boxes, klass)
-#           for mask in masks:
-#               viz = draw_mask(viz, mask)
-#           tpviz.interactive_imshow(viz)
-#           input()
 
         return ret
 

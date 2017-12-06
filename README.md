@@ -1,6 +1,7 @@
 # Faster-RCNN / Mask-RCNN
-This example aims to provide a minimal (1.3k lines) multi-GPU implementation of
-Faster-RCNN / Mask-RCNN (without FPN)
+A minimal multi-GPU implementation of Faster-RCNN / Mask-RCNN (without FPN).
+Modified from https://github.com/ppwwyyxx/tensorpack/tree/master/examples/FasterRCNN.
+
 
 ## Dependencies
 + Python 3; TensorFlow >= 1.4.0
@@ -20,17 +21,17 @@ ct_segmentation_data_fine/
 
 ### File Structure
 This is a minimal implementation that simply contains these files:
-+ preprocess.py: preprocess data and save png to the directory `processed_image`. If mri image is available, images will be saved to the directory `fusion`.
-+ config.py: configuration for all
-+ oar.py: load OAR data
-+ data.py: prepare data for training
-+ common.py: common data preparation utilities
-+ basemodel.py: implement resnet
-+ model.py: implement rpn/faster-rcnn/mask-rcnn
-+ train.py: main training script
-+ utils/: third-party helper functions
-+ eval.py: evaluation utilities
-+ viz.py: visualization utilities
++ `preprocess.py`: preprocess data and save png to the directory `processed_image`. If mri image is available, images will be saved to the directory `fusion`.
++ `config.py`: configuration for all
++ `oar.py`: load OAR data
++ `data.py`: prepare data for training
++ `common.py`: common data preparation utilities
++ `basemodel.py`: implement resnet
++ `model.py`: implement rpn/faster-rcnn/mask-rcnn
++ `train.py`: main training script
++ `utils/`: third-party helper functions
++ `eval.py`: evaluation utilities
++ `viz.py`: visualization utilities
 
 ## Usage
 Change config in `config.py`:

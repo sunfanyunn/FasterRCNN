@@ -28,7 +28,7 @@ from model import (
     fastrcnn_head, fastrcnn_losses, fastrcnn_predictions,
     maskrcnn_head, maskrcnn_loss)
 from data import (
-    get_train_dataflow, get_eval_dataflow,
+    get_train_dataflow, get_eval_dataflow, get_test_dataflow,
     get_all_anchors)
 from viz import (
     draw_annotation, draw_proposal_recall,
@@ -42,7 +42,6 @@ from oar import OARDetection
 import matplotlib.pyplot as plt
 import collections
 import SimpleITK as sitk
-from tqdm import tqdm
 
 '''
  input: a list of dic
@@ -315,7 +314,7 @@ class Model(ModelDesc):
         return opt
 
 def visualize(model_path, nr_visualize=50, output_dir='visualize'):
-    df = get_train_dataflow()   # we don't visualize mask stuff
+    df = get_test_dataflow()   # we don't visualize mask stuff
     df.reset_state()
 
     pred = OfflinePredictor(PredictConfig(
@@ -337,7 +336,7 @@ def visualize(model_path, nr_visualize=50, output_dir='visualize'):
     utils.fs.mkdir_p(output_dir)
     with tqdm.tqdm(total=nr_visualize) as pbar:
         for idx, dp in itertools.islice(enumerate(df.get_data()), nr_visualize):
-            img, _, _, gt_boxes, gt_labels = dp
+            img, _, _, gt_boxes, gt_labels, _ = dp
 
             rpn_boxes, rpn_scores, all_probs, \
                 final_boxes, final_probs, final_labels, final_masks = pred(img, gt_boxes, gt_labels)
@@ -359,8 +358,8 @@ def visualize(model_path, nr_visualize=50, output_dir='visualize'):
                 gt_viz, proposal_viz,
                 score_viz, final_viz], 2, 2)
 
-            if os.environ.get('DISPLAY', None):
-                tpviz.interactive_imshow(viz)
+#            if os.environ.get('DISPLAY', None):
+#                tpviz.interactive_imshow(viz)
             cv2.imwrite("{}/{:03d}.png".format(output_dir, idx), viz)
             pbar.update()
 
@@ -376,7 +375,7 @@ class MyEncoder(json.JSONEncoder):
             return super(MyEncoder, self).default(obj)
 
 def offline_evaluate(pred_func, output_file):
-    df = get_eval_dataflow()
+    df = get_test_dataflow()
     all_results = eval_on_dataflow(
         df, lambda img: detect_one_image(img, pred_func))
     print(all_results)
@@ -395,7 +394,7 @@ def offline_evaluate(pred_func, output_file):
 '''
 def generate_nii(pred_func, input_files):
     arg = []
-    for idx,input_file in tqdm(enumerate(input_files)):
+    for idx,input_file in tqdm.tqdm(enumerate(input_files)):
         boxes = collections.defaultdict(list)
         masks = collections.defaultdict(list)
 
@@ -488,8 +487,9 @@ if __name__ == '__main__':
         imgs = OARDetection.load_many(config.BASEDIR, config.TEST_DATASET, add_gt=False)
 
         if args.visualize:
-            imgs = [img['file_name'] for img in imgs]
-            predict_many(pred, imgs)
+            visualize(args.load)
+#            imgs = [img['file_name'] for img in imgs]
+#            predict_many(pred, imgs)
         else:
             if args.evaluate:
                 imgs = [img['file_name'] for img in imgs]

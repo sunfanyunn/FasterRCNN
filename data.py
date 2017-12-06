@@ -187,7 +187,6 @@ def get_rpn_anchor_input(im, boxes, is_crowd):
     featuremap_boxes = featuremap_boxes.reshape((featureH, featureW, config.NUM_ANCHOR, 4))
     return featuremap_labels, featuremap_boxes
 
-
 def get_train_dataflow(add_mask=True):
     """
     Return a training dataflow. Each datapoint is:
@@ -251,12 +250,12 @@ def get_train_dataflow(add_mask=True):
             assert len(boxes) == np.asarray(masks).shape[0]
             ret.append(masks)
 #
-            from viz import draw_annotation, draw_mask
-            viz = draw_annotation(im, boxes, klass)
-            for mask in masks:
-                viz = draw_mask(viz, mask)
-            tpviz.interactive_imshow(viz)
-            input()
+#           from viz import draw_annotation, draw_mask
+#           viz = draw_annotation(im, boxes, klass)
+#           for mask in masks:
+#               viz = draw_mask(viz, mask)
+#           tpviz.interactive_imshow(viz)
+#           input()
 
         return ret
 
@@ -264,32 +263,157 @@ def get_train_dataflow(add_mask=True):
     #ds = PrefetchDataZMQ(ds, 500, 1)
     return ds
 
-def get_test_dataflow():
-    imgs = OARDetection.load_many(config.BASEDIR, config.TEST_DATASET, add_gt=False)
-    # no filter for training
-    ds = DataFromListOfDict(imgs, ['file_name', 'id'])
+def get_test_dataflow(add_mask=True):
+    """
+    Return a training dataflow. Each datapoint is:
+    image, fm_labels, fm_boxes, gt_boxes, gt_class [, masks]
+    """
+    imgs = OARDetection.load_many(
+        config.BASEDIR, config.TEST_DATASET, add_gt=True, add_mask=add_mask)
+    # Valid training images should have at least one fg box.
+    # But this filter shall not be applied for testing.
+    imgs = list(filter(lambda img: len(img['boxes']) > 0, imgs))    # log invalid training
 
-    def f(fname):
+    ds = DataFromList(imgs, shuffle=True)
+
+    aug = imgaug.AugmentorList(
+        [CustomResize(config.SHORT_EDGE_SIZE, config.MAX_SIZE)])
+#         imgaug.Flip(horiz=True)])
+
+    def preprocess(img):
+        fname, boxes, klass, is_crowd = img['file_name'], img['boxes'], img['class'], img['is_crowd']
         im = cv2.imread(fname, cv2.IMREAD_COLOR)
         assert im is not None, fname
-        return im
-    ds = MapDataComponent(ds, f, 0)
-    #ds = PrefetchDataZMQ(ds, 1)
+        im = im.astype('float32')
+        # assume floatbox as input
+        assert boxes.dtype == np.float32
+        # augmentation:
+        im, params = aug.augment_return_params(im)
+        points = box_to_point8(boxes)
+        points = aug.augment_coords(points, params)
+        boxes = point8_to_box(points)
+
+        # rpn anchor:
+        try:
+            fm_labels, fm_boxes = get_rpn_anchor_input(im, boxes, is_crowd)
+            boxes = boxes[is_crowd == 0]    # skip crowd boxes in training target
+            klass = klass[is_crowd == 0]
+            if not len(boxes):
+                raise MalformedData("No valid gt_boxes!")
+        except MalformedData as e:
+            log_once("Input {} is filtered for training: {}".format(fname, str(e)), 'warn')
+            return None
+
+        ret = [im, fm_labels, fm_boxes, boxes, klass]
+
+        # masks
+        if add_mask:
+            # augmentation will modify the polys in-place
+            #segmentation = copy.deepcopy(img.get('segmentation', None))
+            #segmentation = [segmentation[k] for k in range(len(segmentation)) if not is_crowd[k]]
+            #assert len(segmentation) == len(boxes)
+
+            ## one image-sized binary mask per box
+            #masks = []
+            #for polys in segmentation:
+            #    polys = [aug.augment_coords(p, params) for p in polys]
+            #    masks.append(segmentation_to_mask(polys, im.shape[0], im.shape[1]))
+            # values in {0, 1}
+
+            masks = img['masks']
+            masks = [np.dstack([m, m, m]) for m in masks]
+            masks = [aug.augment(m)[...,0] for m in masks]
+            assert len(boxes) == np.asarray(masks).shape[0]
+            ret.append(masks)
+#
+#           from viz import draw_annotation, draw_mask
+#           viz = draw_annotation(im, boxes, klass)
+#           for mask in masks:
+#               viz = draw_mask(viz, mask)
+#           tpviz.interactive_imshow(viz)
+#           input()
+
+        return ret
+
+    ds = MapData(ds, preprocess)
+    #ds = PrefetchDataZMQ(ds, 500, 1)
     return ds
 
-def get_eval_dataflow():
-    imgs = OARDetection.load_many(config.BASEDIR, config.VAL_DATASET, add_gt=False)
-    # no filter for training
-    ds = DataFromListOfDict(imgs, ['file_name', 'id'])
+def get_eval_dataflow(add_mask=True):
+    """
+    Return a training dataflow. Each datapoint is:
+    image, fm_labels, fm_boxes, gt_boxes, gt_class [, masks]
+    """
+    imgs = OARDetection.load_many(
+        config.BASEDIR, config.VAL_DATASET, add_gt=True, add_mask=add_mask)
+    # Valid training images should have at least one fg box.
+    # But this filter shall not be applied for testing.
+    imgs = list(filter(lambda img: len(img['boxes']) > 0, imgs))    # log invalid training
 
-    def f(fname):
+    ds = DataFromList(imgs, shuffle=True)
+
+    aug = imgaug.AugmentorList(
+        [CustomResize(config.SHORT_EDGE_SIZE, config.MAX_SIZE)])
+#         imgaug.Flip(horiz=True)])
+
+    def preprocess(img):
+        fname, boxes, klass, is_crowd = img['file_name'], img['boxes'], img['class'], img['is_crowd']
         im = cv2.imread(fname, cv2.IMREAD_COLOR)
         assert im is not None, fname
-        return im
-    ds = MapDataComponent(ds, f, 0)
-    #ds = PrefetchDataZMQ(ds, 1)
-    return ds
+        im = im.astype('float32')
+        # assume floatbox as input
+        assert boxes.dtype == np.float32
+        # augmentation:
+        im, params = aug.augment_return_params(im)
+        points = box_to_point8(boxes)
+        points = aug.augment_coords(points, params)
+        boxes = point8_to_box(points)
 
+        # rpn anchor:
+        try:
+            fm_labels, fm_boxes = get_rpn_anchor_input(im, boxes, is_crowd)
+            boxes = boxes[is_crowd == 0]    # skip crowd boxes in training target
+            klass = klass[is_crowd == 0]
+            if not len(boxes):
+                raise MalformedData("No valid gt_boxes!")
+        except MalformedData as e:
+            log_once("Input {} is filtered for training: {}".format(fname, str(e)), 'warn')
+            return None
+
+        ret = [im, fm_labels, fm_boxes, boxes, klass]
+
+        # masks
+        if add_mask:
+            # augmentation will modify the polys in-place
+            #segmentation = copy.deepcopy(img.get('segmentation', None))
+            #segmentation = [segmentation[k] for k in range(len(segmentation)) if not is_crowd[k]]
+            #assert len(segmentation) == len(boxes)
+
+            ## one image-sized binary mask per box
+            #masks = []
+            #for polys in segmentation:
+            #    polys = [aug.augment_coords(p, params) for p in polys]
+            #    masks.append(segmentation_to_mask(polys, im.shape[0], im.shape[1]))
+            # values in {0, 1}
+
+            masks = img['masks']
+            masks = [np.dstack([m, m, m]) for m in masks]
+            masks = [aug.augment(m)[...,0] for m in masks]
+            assert len(boxes) == np.asarray(masks).shape[0]
+            ret.append(masks)
+#
+#           from viz import draw_annotation, draw_mask
+#           viz = draw_annotation(im, boxes, klass)
+#           for mask in masks:
+#               viz = draw_mask(viz, mask)
+#           tpviz.interactive_imshow(viz)
+#           input()
+
+        return ret
+
+    ds = MapData(ds, preprocess)
+    #ds = PrefetchDataZMQ(ds, 500, 1)
+    return ds
 
 if __name__ == '__main__':
     from tensorpack.dataflow import PrintData

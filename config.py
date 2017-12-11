@@ -4,6 +4,9 @@
 
 import numpy as np
 
+# 
+TWO_STREAM = True
+
 # mode flags ---------------------
 MODE_MASK = True
 

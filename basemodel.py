@@ -71,20 +71,20 @@ def resnet_group(l, name, block_func, features, count, stride):
     return l
 
 
-def pretrained_resnet_conv4(image, num_blocks):
+def pretrained_resnet_conv4(image, num_blocks, prefix=''):
     assert len(num_blocks) == 3
     with argscope([Conv2D, MaxPooling, BatchNorm], data_format='NCHW'), \
             argscope(Conv2D, nl=tf.identity, use_bias=False), \
             argscope(BatchNorm, use_local_stat=False):
         l = tf.pad(image, [[0, 0], [0, 0], [2, 3], [2, 3]])
-        l = Conv2D('conv0', l, 64, 7, stride=2, nl=BNReLU, padding='VALID')
+        l = Conv2D(prefix + 'conv0', l, 64, 7, stride=2, nl=BNReLU, padding='VALID')
         l = tf.pad(l, [[0, 0], [0, 0], [0, 1], [0, 1]])
-        l = MaxPooling('pool0', l, shape=3, stride=2, padding='VALID')
-        l = resnet_group(l, 'group0', resnet_bottleneck, 64, num_blocks[0], 1)
+        l = MaxPooling(prefix + 'pool0', l, shape=3, stride=2, padding='VALID')
+        l = resnet_group(l, prefix + 'group0', resnet_bottleneck, 64, num_blocks[0], 1)
         # TODO replace var by const to enable folding
         l = tf.stop_gradient(l)
-        l = resnet_group(l, 'group1', resnet_bottleneck, 128, num_blocks[1], 2)
-        l = resnet_group(l, 'group2', resnet_bottleneck, 256, num_blocks[2], 2)
+        l = resnet_group(l, prefix + 'group1', resnet_bottleneck, 128, num_blocks[1], 2)
+        l = resnet_group(l, prefix + 'group2', resnet_bottleneck, 256, num_blocks[2], 2)
     # 16x downsampling up to now
     return l
 

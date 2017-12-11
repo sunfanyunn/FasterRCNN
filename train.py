@@ -182,11 +182,25 @@ class Model(ModelDesc):
         else:
             image, anchor_labels, anchor_boxes, gt_boxes, gt_labels = inputs
         fm_anchors = self._get_anchors(image)
-        image = self._preprocess(image)     # 1CHW
-        image_shape2d = tf.shape(image)[2:]
+        if config.TWO_STREAM:
+            arr = tf.unstack(image, axis=-1)
+            ct, mr = arr[0], arr[1]
+            ct = tf.stack([ct, ct, ct], axis=-1)
+            mr = tf.stack([mr, mr, mr], axis=-1)
 
-        anchor_boxes_encoded = encode_bbox_target(anchor_boxes, fm_anchors)
-        featuremap = pretrained_resnet_conv4(image, config.RESNET_NUM_BLOCK[:3])
+            ct = self._preprocess(ct)
+            mr = self._preprocess(mr)
+            # for later summary
+            image = ct
+
+            image_shape2d = tf.shape(ct)[2:]
+            featuremap = pretrained_resnet_conv4(ct, config.RESNET_NUM_BLOCK[:3], prefix='ct') + \
+                         pretrained_resnet_conv4(mr, config.RESNET_NUM_BLOCK[:3], prefix='mr')
+        else:
+            image = self._preprocess(image)     # 1CHW
+            image_shape2d = tf.shape(image)[2:]
+            featuremap = pretrained_resnet_conv4(image, config.RESNET_NUM_BLOCK[:3])
+
         rpn_label_logits, rpn_box_logits = rpn_head('rpn', featuremap, 1024, config.NUM_ANCHOR)
 
         decoded_boxes = decode_bbox_target(rpn_box_logits, fm_anchors)  # fHxfWxNAx4, floatbox
@@ -194,6 +208,8 @@ class Model(ModelDesc):
             tf.reshape(decoded_boxes, [-1, 4]),
             tf.reshape(rpn_label_logits, [-1]),
             image_shape2d)
+
+        anchor_boxes_encoded = encode_bbox_target(anchor_boxes, fm_anchors)
 
         if is_training:
             # sample proposal boxes in training
@@ -503,7 +519,7 @@ if __name__ == '__main__':
     else:
         logger.set_logger_dir(args.logdir)
         print_config()
-        stepnum = 300
+        stepnum = 300 * 2
         warmup_epoch = max(math.ceil(500.0 / stepnum), 5)
         factor = get_batch_factor()
 

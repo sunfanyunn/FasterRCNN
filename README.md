@@ -1,6 +1,7 @@
 # Faster-RCNN / Mask-RCNN
 A minimal multi-GPU implementation of Faster-RCNN / Mask-RCNN (without FPN).
-Modified from https://github.com/ppwwyyxx/tensorpack/tree/master/examples/FasterRCNN.
+
+Modified from https://github.com/ppwwyyxx/tensorpack/tree/master/examples/FasterRCNN to train on NPC-OAR(A Multi-modal Nasopharyngeal Carcinoma Dataset).
 
 
 ## Dependencies
